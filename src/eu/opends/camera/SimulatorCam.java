@@ -90,12 +90,12 @@ public class SimulatorCam extends CameraFactory
 			highlight.circle[0] = sim.getGuiNode().getChild("tagcircle0_"+Integer.toString(i));
 			highlight.circle[1] = sim.getGuiNode().getChild("tagcircle1_"+Integer.toString(i));
 
-			HighlightUtils.highlights.add(highlight);
+			HighlightUtils.highlights[i] = highlight;
 
 		}
-        //HighlightUtils.tags.add(sim.getGuiNode().getChild("tagcircle0_0"));
-        //HighlightUtils.tags.add(sim.getGuiNode().getChild("tagcircle1_0"));
-        //HighlightUtils.popLinkNode = sim.getGuiNode().getChild("poplink0");
+        HighlightUtils.gazeNodes[0]=sim.getGuiNode().getChild("gaze");
+        HighlightUtils.gazeNodes[1]=sim.getGuiNode().getChild("gazed");
+        HighlightUtils.gazeNodes[1].setCullHint(CullHint.Always);
 	}
 
 
@@ -229,12 +229,23 @@ public class SimulatorCam extends CameraFactory
 			// for car objWdCoord.y=objWdCoord.y+1; for roadsign +2
 
             Vector3f gazeScreenCoord = new Vector3f(GazeCoord.x,GazeCoord.y,0);
-            try {
-                sim.getGuiNode().getChild("gaze").setLocalTranslation(gazeScreenCoord);
+            if (HighlightUtils.gazeToggler) {
+                try {
+                    HighlightUtils.gazeNodes[HighlightUtils.gazeStatus].setLocalTranslation(gazeScreenCoord);
+                    if (HighlightUtils.gazeNodes[HighlightUtils.gazeStatus].getCullHint()==CullHint.Always){
+                        HighlightUtils.gazeNodes[HighlightUtils.gazeStatus].setCullHint(CullHint.Dynamic);
+                    }
+                }
+                catch (NullPointerException e) {
+                    //do nothing
+                }
             }
-            catch (NullPointerException e) {
-                //do nothing
+            else {
+                if (HighlightUtils.gazeNodes[HighlightUtils.gazeStatus].getCullHint()==CullHint.Dynamic) {
+                    HighlightUtils.gazeNodes[HighlightUtils.gazeStatus].setCullHint(CullHint.Always);
+                }
             }
+
 
             for (DrivingAlert alert : HighlightUtils.visibleAlertList) {
                 //System.out.println(HighlightUtils.visibleAlertList.size());
@@ -264,7 +275,7 @@ public class SimulatorCam extends CameraFactory
                     alert.highlight.popLinkNode.setCullHint(Spatial.CullHint.Dynamic);
                 }
             }
-            //System.out.println(sim.getSceneNode().getChild("Models/Cars/drivingCars/bmw1/Car-scene_node").getWorldRotation());			//System.out.println(sim.getSceneNode().getChild("Models/Cars/drivingCars/bmw1/Car-scene_node").getWorldRotation());
+            //System.out.println(sim.getSceneNode().getChild("Models/Cars/drivingCars/bmw1/Car-scene_node").getWorldTranslation());			//System.out.println(sim.getSceneNode().getChild("Models/Cars/drivingCars/bmw1/Car-scene_node").getWorldRotation());
 		}
 		else
 		{

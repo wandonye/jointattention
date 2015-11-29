@@ -37,16 +37,13 @@ public class AlertAgent implements Runnable{
             gazeScreenCoord.x = GazeCoord.x;
             gazeScreenCoord.y = GazeCoord.y;
 
-            //replace pq with list
             //maintain a visible list
             for (DrivingAlert alert : HighlightUtils.alertList) {
                 if (HighlightUtils.isVisible(cam,alert.obj)) {
                     //System.out.println(alert.obj.getName());
 
                     if (alert.on==false) {    //alert is not in visibleAlertList
-                        alert.highlight = HighlightUtils.highlights.get(HighlightUtils.visibleAlertList.size()); //have 2 tags
-                        //alert.highlight.circle[alert.priority].setCullHint(Spatial.CullHint.Dynamic);
-                        //alert.highlight.popLinkNode.setCullHint(Spatial.CullHint.Dynamic);
+                        alert.highlight = HighlightUtils.highlights[HighlightUtils.visibleAlertList.size()]; //have 2 tags
 
                         HighlightUtils.visibleAlertList.add(alert);
                         alert.on = true;
@@ -56,14 +53,13 @@ public class AlertAgent implements Runnable{
                         //Only if visible, not gazed and in the visibleAlertList we need to check gaze
                         if (alert.gazed==false) {
 
-                            HighlightUtils.gazeRay.setOrigin(cam.getLocation());
-                            HighlightUtils.gazeRay.setDirection(gazeScreenCoord.subtract(HighlightUtils.gazeRay.origin));
-                            //HighlightUtils.gazeCone
-
-                            if (alert.obj.getWorldBound().intersects(HighlightUtils.gazeRay)) {
+                            if (HighlightUtils.isGazed(alert.obj.getWorldBound(),gazeScreenCoord,
+                                    cam.getLocation(),HighlightUtils.gazeError)) {
                                 alert.gazed = true;
                                 alert.setNormal();
                                 System.out.println("You saw it");
+                                HighlightUtils.gazeStatus = 1;
+                                HighlightUtils.gazeNodes[0].setCullHint(Spatial.CullHint.Always);
                             }
                             else {
                                 //not gazed before, not this time
@@ -73,12 +69,18 @@ public class AlertAgent implements Runnable{
                                     if (alert.urgencyUp()) {
                                         alert.highlight.circle[Math.min(1,alert.priority+1)].setCullHint(Spatial.CullHint.Always);
                                         alert.unnoticedCounter = 0;
-                                        //alert.highlight.circle[alert.priority].setCullHint(Spatial.CullHint.Dynamic);
                                     }
                                 }
                                 else {
                                     alert.unnoticedCounter++;
                                 }
+                            }
+                        }
+                        else {
+                            if (!HighlightUtils.isGazed(alert.obj.getWorldBound(),gazeScreenCoord,
+                                    cam.getLocation(),HighlightUtils.gazeError)) {
+                                HighlightUtils.gazeStatus = 0;
+                                HighlightUtils.gazeNodes[1].setCullHint(Spatial.CullHint.Always);
                             }
                         }
 
