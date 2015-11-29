@@ -27,11 +27,12 @@ import com.jme3.scene.Spatial;
 import com.jme3.scene.Spatial.CullHint;
 import com.jme3.scene.control.CameraControl;
 import com.jme3.scene.shape.Cylinder;
+import com.jme3.scene.shape.Line;
 
 import eu.opends.car.Car;
 import eu.opends.jointAttention.DrivingAlert;
-import eu.opends.jointAttention.Tag;
-import eu.opends.main.HighlightUtils;
+import eu.opends.jointAttention.Highlight;
+import eu.opends.jointAttention.HighlightUtils;
 import eu.opends.main.Simulator;
 import eu.opends.jointAttention.GazeCoord;
 import eu.opends.tools.PanelCenter;
@@ -56,6 +57,8 @@ public class SimulatorCam extends CameraFactory
 		initCamera(sim, carNode);		
 		setCamMode(CameraMode.EGO);
 		initMapMarker();
+        sim.getAlertAgent().setCam(sim.getCamera());
+        sim.getAlertAgent().start();
 	}
 
 
@@ -73,17 +76,26 @@ public class SimulatorCam extends CameraFactory
 		
 		sim.getRootNode().attachChild(geoCone);
 
-        HighlightUtils.popLink.setLineWidth(1);
-        Geometry geometry = new Geometry("poplink", HighlightUtils.popLink);
-        coneMaterial.setColor("Color", ColorRGBA.White);
-        geometry.setMaterial(coneMaterial);
-        geometry.setCullHint(CullHint.Always);
-        sim.getGuiNode().attachChild(geometry);
 
-        HighlightUtils.tags.add(sim.getGuiNode().getChild("tagcircle0_0"));
-        HighlightUtils.tags.add(sim.getGuiNode().getChild("tagcircle1_0"));
-        HighlightUtils.popLinkNode = sim.getGuiNode().getChild("poplink");
+        for (int i = 0; i<HighlightUtils.numOfHighlights; i++) {
+			//HighlightUtils.popLink.setLineWidth(1);
+			Line popLink = new Line(new Vector3f(0,0,0),new Vector3f(1f,1f,1f));
+			Geometry geometry = new Geometry("poplink"+Integer.toString(i), popLink);
+			coneMaterial.setColor("Color", ColorRGBA.White);
+			geometry.setMaterial(coneMaterial);
+			geometry.setCullHint(CullHint.Always);
+			sim.getGuiNode().attachChild(geometry);
 
+			Highlight highlight = new Highlight(geometry,popLink);
+			highlight.circle[0] = sim.getGuiNode().getChild("tagcircle0_"+Integer.toString(i));
+			highlight.circle[1] = sim.getGuiNode().getChild("tagcircle1_"+Integer.toString(i));
+
+			HighlightUtils.highlights.add(highlight);
+
+		}
+        //HighlightUtils.tags.add(sim.getGuiNode().getChild("tagcircle0_0"));
+        //HighlightUtils.tags.add(sim.getGuiNode().getChild("tagcircle1_0"));
+        //HighlightUtils.popLinkNode = sim.getGuiNode().getChild("poplink0");
 	}
 
 
@@ -224,100 +236,35 @@ public class SimulatorCam extends CameraFactory
                 //do nothing
             }
 
+            for (DrivingAlert alert : HighlightUtils.visibleAlertList) {
+                //System.out.println(HighlightUtils.visibleAlertList.size());
+                if (alert!=null) {
+                    Vector3f objWdCoord  = alert.obj.getWorldTranslation();
+                    Vector3f objScreenCoord;
 
-			DrivingAlert alert = HighlightUtils.alerts.peek();
-			if (alert!=null) {
+                    //replace this with a lift space in the alert.
 
-                //System.out.println(sim.getSceneNode().getChild("Models/Cars/drivingCars/bmw1/Car-scene_node").getWorldTranslation());
-                //Detect where the driver is looking at
-                HighlightUtils.gazeRay.setOrigin(sim.getCamera().getLocation());
-                HighlightUtils.gazeRay.setDirection(gazeScreenCoord.subtract(HighlightUtils.gazeRay.origin));
-                //HighlightUtils.gazeCone
+                    objScreenCoord = sim.getCamera().getScreenCoordinates(objWdCoord.add(0,alert.headSpace,0));
 
-                if (alert.obj.getWorldBound().intersects(HighlightUtils.gazeRay)) {
-                    alert.gazed = true;
-                    System.out.println("You saw it");
-                    //alert.obj.getWorldBound().
-
-                }
-                else {
-                    //System.out.println(HighlightUtils.gazeRay.direction);
-                }
-				Vector3f objWdCoord  = alert.obj.getWorldTranslation();
-				Spatial tag = HighlightUtils.tags.get(Math.min(1,alert.priority)); //We have two pictures for now.
-
-				if (HighlightUtils.isInScreen(sim.getCamera(),alert.obj)) {
-					//alert obj is inside the screen
-                    //System.out.println(HighlightUtils.isVisible(sim.getCamera(),alert.obj));
-					if (alert.on==false) {    //load this alert for the first time
-						HighlightUtils.unnoticedCounter = 0;
-						tag.setCullHint(CullHint.Dynamic);
-						HighlightUtils.popLinkNode.setCullHint(CullHint.Dynamic);
-						alert.on = true;
-						System.out.println("Alert for "+alert.obj.getName()+" is ON.");
-					}
-					Vector3f objScreenCoord;
-
-					//replace this with a lift space in the alert.
-					if (alert.obj.getName().startsWith("roadsign")) {
-						objScreenCoord = sim.getCamera().getScreenCoordinates(objWdCoord.add(0, 2f, 0));
-					}
-					else {
-						objScreenCoord = sim.getCamera().getScreenCoordinates(objWdCoord.add(0, 1f, 0));
-					}
-
-					//If saw the alerted object
-					if (alert.gazed==false) {
-						if (HighlightUtils.unnoticedCounter>50) {
-							//goes to the next tagStatus
-							if (alert.urgencyUp()) {
-								tag.setCullHint(CullHint.Always);
-								HighlightUtils.unnoticedCounter = 0;
-								tag = HighlightUtils.tags.get(Math.min(1,alert.priority));
-								tag.setCullHint(CullHint.Dynamic);
-							}
-						}
-						else {
-							HighlightUtils.unnoticedCounter++;
-							tag = HighlightUtils.tags.get(Math.min(1,alert.priority));
-						}
-						//refresh alert.gazed here
-						//Gaze Coordinate out of 1000
-					}
-                    else {
-                        alert.setNormal();
+                    //Draw poplink, highlighting tag.
+                    float tagCenterX;
+                    if (objScreenCoord.x>HighlightUtils.screenSizeX/2) {
+                        tagCenterX = objScreenCoord.x-50;
                     }
-					//else we could remove the alert earlier here.
-
-
-					//Draw poplink, highlighting tag.
-					float tagCenterX;
-					if (objScreenCoord.x>HighlightUtils.screenSizeX/2) {
-						tagCenterX = objScreenCoord.x-50;
-					}
-					else{
-						tagCenterX = objScreenCoord.x+50;
-					}
-					Vector3f tagScreenCoord = new Vector3f(tagCenterX,HighlightUtils.screenSizeY*2/3,objScreenCoord.z);
-					//System.out.println(sim.getSceneNode().getChild("Models/Cars/drivingCars/bmw1/Car-scene_node").getWorldTranslation());
-					HighlightUtils.popLink.updatePoints(objScreenCoord, tagScreenCoord);
-
-					tagScreenCoord.x = tagCenterX - 50;
-					tagScreenCoord.y = tagScreenCoord.y - 50;								 // 2/3 from the bottom
-					tag.setLocalTranslation(tagScreenCoord);
-				}
-				else {
-                    //System.out.println("Outside Screen");
-                    if (alert.objType==0) {
-                        tag.setCullHint(CullHint.Always);
-                        HighlightUtils.popLinkNode.setCullHint(CullHint.Always);
-                        HighlightUtils.alerts.remove();
+                    else{
+                        tagCenterX = objScreenCoord.x+50;
                     }
-				}
-			}
+                    Vector3f tagScreenCoord = new Vector3f(tagCenterX,HighlightUtils.screenSizeY*2/3,objScreenCoord.z);
+                    alert.highlight.popLink.updatePoints(objScreenCoord, tagScreenCoord);
 
-			//System.out.println(sim.getSceneNode().getChild("Models/Cars/drivingCars/bmw1/Car-scene_node").getWorldTranslation());
-			//System.out.println(sim.getSceneNode().getChild("Models/Cars/drivingCars/bmw1/Car-scene_node").getWorldRotation());
+                    tagScreenCoord.x = tagCenterX - 50;
+                    tagScreenCoord.y = tagScreenCoord.y - 50;								 // 2/3 from the bottom
+                    alert.highlight.circle[alert.priority].setLocalTranslation(tagScreenCoord);
+                    alert.highlight.circle[alert.priority].setCullHint(Spatial.CullHint.Dynamic);
+                    alert.highlight.popLinkNode.setCullHint(Spatial.CullHint.Dynamic);
+                }
+            }
+            //System.out.println(sim.getSceneNode().getChild("Models/Cars/drivingCars/bmw1/Car-scene_node").getWorldRotation());			//System.out.println(sim.getSceneNode().getChild("Models/Cars/drivingCars/bmw1/Car-scene_node").getWorldRotation());
 		}
 		else
 		{
