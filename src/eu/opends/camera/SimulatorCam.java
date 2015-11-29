@@ -59,7 +59,11 @@ public class SimulatorCam extends CameraFactory
 		initMapMarker();
         sim.getAlertAgent().setCam(sim.getCamera());
         sim.getAlertAgent().start();
-	}
+
+        for (Spatial child : sim.getSceneNode().getChildren()) {
+            System.out.println(child.getName());
+        }
+    }
 
 
 	private void initMapMarker()
@@ -250,12 +254,8 @@ public class SimulatorCam extends CameraFactory
             for (DrivingAlert alert : HighlightUtils.visibleAlertList) {
                 //System.out.println(HighlightUtils.visibleAlertList.size());
                 if (alert!=null) {
-                    Vector3f objWdCoord  = alert.obj.getWorldTranslation();
-                    Vector3f objScreenCoord;
-
-                    //replace this with a lift space in the alert.
-
-                    objScreenCoord = sim.getCamera().getScreenCoordinates(objWdCoord.add(0,alert.headSpace,0));
+                    Vector3f objWdCoord = alert.obj.getWorldTranslation().add(alert.pointerOffset);
+                    Vector3f objScreenCoord = sim.getCamera().getScreenCoordinates(objWdCoord.add(0, alert.headSpace, 0));
 
                     //Draw poplink, highlighting tag.
                     float tagCenterX;
