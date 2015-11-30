@@ -15,13 +15,10 @@ public class AlertAgent implements Runnable{
     private boolean serving;
     private Thread t;
 
-    Vector3f gazeScreenCoord;
-
     public AlertAgent(Simulator sim) {
         this.sim = sim;
         this.cam = sim.getCamera();
         this.serving = true;
-        this.gazeScreenCoord = new Vector3f(0,0,0);
     }
 
     public void setCam(Camera cam) {
@@ -34,8 +31,6 @@ public class AlertAgent implements Runnable{
     public void run() {
 
         while (this.serving) {
-            gazeScreenCoord.x = GazeCoord.x;
-            gazeScreenCoord.y = GazeCoord.y;
 
             //maintain a visible list
             for (DrivingAlert alert : HighlightUtils.alertList) {
@@ -53,10 +48,17 @@ public class AlertAgent implements Runnable{
                         //Only if visible, not gazed and in the visibleAlertList we need to check gaze
                         if (alert.gazed==false) {
 
-                            if (HighlightUtils.isGazed(alert.obj.getWorldBound(),gazeScreenCoord,
-                                    cam.getLocation(),HighlightUtils.gazeError)) {
+                            //if (HighlightUtils.isGazed(alert.obj.getWorldBound(),cam.getLocation(),HighlightUtils.gazeError)) {
+                            //if (HighlightUtils.hasSeen(cam.getScreenCoordinates(alert.obj.getWorldTranslation()))) {
+                            if (alert.hasSeen(cam)) {
+                                alert.gazedCounter += 1;
+                            }
+                            if (alert.gazedCounter > 10) {
                                 alert.gazed = true;
-                                alert.setNormal();
+                                alert.gazedCounter = 0;
+                                if (alert.urgencyDown()) {
+                                    alert.highlight.circle[Math.max(0, alert.priority - 1)].setCullHint(Spatial.CullHint.Always);
+                                }
                                 System.out.println("You saw it");
                                 HighlightUtils.gazeStatus = 1;
                                 HighlightUtils.gazeNodes[0].setCullHint(Spatial.CullHint.Always);
@@ -64,7 +66,7 @@ public class AlertAgent implements Runnable{
                             else {
                                 //not gazed before, not this time
                                 //System.out.println("You did not see it");
-                                if (alert.unnoticedCounter>50) {
+                                if (alert.unnoticedCounter > 20) {
                                     //goes to the next tagStatus
                                     if (alert.urgencyUp()) {
                                         alert.highlight.circle[Math.min(1,alert.priority+1)].setCullHint(Spatial.CullHint.Always);
@@ -75,10 +77,10 @@ public class AlertAgent implements Runnable{
                                     alert.unnoticedCounter++;
                                 }
                             }
-                        }
-                        else {
-                            if (!HighlightUtils.isGazed(alert.obj.getWorldBound(),gazeScreenCoord,
-                                    cam.getLocation(),HighlightUtils.gazeError)) {
+                        } else {   // alert.gazed==ture
+                            //if (!HighlightUtils.isGazed(alert.obj.getWorldBound(),cam.getLocation(),HighlightUtils.gazeError)) {
+                            //if (HighlightUtils.hasSeen(cam.getScreenCoordinates(alert.obj.getWorldTranslation()))) {
+                            if (!alert.hasSeen(cam)) {
                                 HighlightUtils.gazeStatus = 0;
                                 HighlightUtils.gazeNodes[1].setCullHint(Spatial.CullHint.Always);
                             }
@@ -93,8 +95,7 @@ public class AlertAgent implements Runnable{
                         //turn the highlight off
                         alert.highlight.circle[alert.priority].setCullHint(Spatial.CullHint.Always);
                         alert.highlight.popLinkNode.setCullHint(Spatial.CullHint.Always);
-                        alert.highlight = null;
-                        alert.on = false;
+                        alert.reset();
                     }
                     //otherwise it must be a moving obj (unless our tigger was not made properly)
 
@@ -110,7 +111,7 @@ public class AlertAgent implements Runnable{
 
             }
             try {
-                Thread.sleep(100);
+                Thread.sleep(50);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

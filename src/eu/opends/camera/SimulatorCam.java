@@ -97,9 +97,14 @@ public class SimulatorCam extends CameraFactory
 			HighlightUtils.highlights[i] = highlight;
 
 		}
-        HighlightUtils.gazeNodes[0]=sim.getGuiNode().getChild("gaze");
-        HighlightUtils.gazeNodes[1]=sim.getGuiNode().getChild("gazed");
-        HighlightUtils.gazeNodes[1].setCullHint(CullHint.Always);
+		try {
+			HighlightUtils.gazeNodes[0] = sim.getGuiNode().getChild("gaze");
+			HighlightUtils.gazeNodes[1] = sim.getGuiNode().getChild("gazed");
+			HighlightUtils.gazeNodes[1].setCullHint(CullHint.Always);
+		} catch (Exception e) {
+			//do nothing
+		}
+
 	}
 
 
@@ -230,19 +235,22 @@ public class SimulatorCam extends CameraFactory
 			}		
 			
 			//update view starts here
-			// for car objWdCoord.y=objWdCoord.y+1; for roadsign +2
 
             Vector3f gazeScreenCoord = new Vector3f(GazeCoord.x,GazeCoord.y,0);
             if (HighlightUtils.gazeToggler) {
                 try {
-                    HighlightUtils.gazeNodes[HighlightUtils.gazeStatus].setLocalTranslation(gazeScreenCoord);
+					if (HighlightUtils.gazeNodes[1 - HighlightUtils.gazeStatus].getCullHint() != CullHint.Always) {
+						HighlightUtils.gazeNodes[1 - HighlightUtils.gazeStatus].setCullHint(CullHint.Always);
+					}
+					HighlightUtils.gazeNodes[HighlightUtils.gazeStatus].setLocalTranslation(gazeScreenCoord);
                     if (HighlightUtils.gazeNodes[HighlightUtils.gazeStatus].getCullHint()==CullHint.Always){
                         HighlightUtils.gazeNodes[HighlightUtils.gazeStatus].setCullHint(CullHint.Dynamic);
                     }
                 }
                 catch (NullPointerException e) {
                     //do nothing
-                }
+					System.out.println("Bad thing about gaze happened");
+				}
             }
             else {
                 if (HighlightUtils.gazeNodes[HighlightUtils.gazeStatus].getCullHint()==CullHint.Dynamic) {
@@ -252,7 +260,6 @@ public class SimulatorCam extends CameraFactory
 
 
             for (DrivingAlert alert : HighlightUtils.visibleAlertList) {
-                //System.out.println(HighlightUtils.visibleAlertList.size());
                 if (alert!=null) {
                     Vector3f objWdCoord = alert.obj.getWorldTranslation().add(alert.pointerOffset);
                     Vector3f objScreenCoord = sim.getCamera().getScreenCoordinates(objWdCoord.add(0, alert.headSpace, 0));
