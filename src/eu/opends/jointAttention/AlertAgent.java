@@ -4,9 +4,11 @@ package eu.opends.jointAttention;
  * Created by Danny on 11/26/15.
  */
 
+import com.jme3.audio.AudioSource;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Spatial;
+import eu.opends.audio.AudioCenter;
 import eu.opends.main.Simulator;
 
 public class AlertAgent implements Runnable{
@@ -53,7 +55,7 @@ public class AlertAgent implements Runnable{
                             if (alert.hasSeen(cam)) {
                                 alert.gazedCounter += 1;
                             }
-                            if (alert.gazedCounter > 10) {
+                            if (alert.gazedCounter > 5) {
                                 alert.gazed = true;
                                 alert.gazedCounter = 0;
                                 if (alert.urgencyDown()) {
@@ -66,12 +68,18 @@ public class AlertAgent implements Runnable{
                             else {
                                 //not gazed before, not this time
                                 //System.out.println("You did not see it");
-                                if (alert.unnoticedCounter > 20) {
+                                if (alert.unnoticedCounter > 50) {
+                                    //System.out.println("Beep");
+                                    if (HighlightUtils.soundToggler) {
+                                        AudioCenter.playSound("warn");
+                                    }
+                                    alert.unnoticedCounter = 0;
+                                } else if (alert.unnoticedCounter > 20) {
                                     //goes to the next tagStatus
                                     if (alert.urgencyUp()) {
                                         alert.highlight.circle[Math.min(1,alert.priority+1)].setCullHint(Spatial.CullHint.Always);
-                                        alert.unnoticedCounter = 0;
                                     }
+                                    alert.unnoticedCounter++;
                                 }
                                 else {
                                     alert.unnoticedCounter++;
@@ -80,9 +88,15 @@ public class AlertAgent implements Runnable{
                         } else {   // alert.gazed==ture
                             //if (!HighlightUtils.isGazed(alert.obj.getWorldBound(),cam.getLocation(),HighlightUtils.gazeError)) {
                             //if (HighlightUtils.hasSeen(cam.getScreenCoordinates(alert.obj.getWorldTranslation()))) {
+                            if (AudioCenter.getAudioNode("warn").getStatus() == AudioSource.Status.Playing) {
+                                AudioCenter.stopSound("warn");
+                            }
                             if (!alert.hasSeen(cam)) {
                                 HighlightUtils.gazeStatus = 0;
                                 HighlightUtils.gazeNodes[1].setCullHint(Spatial.CullHint.Always);
+                            } else {
+                                HighlightUtils.gazeStatus = 1;
+                                HighlightUtils.gazeNodes[0].setCullHint(Spatial.CullHint.Always);
                             }
                         }
 
@@ -93,9 +107,16 @@ public class AlertAgent implements Runnable{
                     if (alert.on) {
                         //System.out.println("Moving out of Screen");
                         //turn the highlight off
+                        if (AudioCenter.getAudioNode("warn").getStatus() == AudioSource.Status.Playing) {
+                            AudioCenter.stopSound("warn");
+                        }
+
                         alert.highlight.circle[alert.priority].setCullHint(Spatial.CullHint.Always);
                         alert.highlight.popLinkNode.setCullHint(Spatial.CullHint.Always);
                         alert.reset();
+                        //turn the red gaze spot off
+                        HighlightUtils.gazeStatus = 0;
+                        HighlightUtils.gazeNodes[1].setCullHint(Spatial.CullHint.Always);
                     }
                     //otherwise it must be a moving obj (unless our tigger was not made properly)
 

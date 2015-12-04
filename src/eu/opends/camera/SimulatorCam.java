@@ -261,19 +261,19 @@ public class SimulatorCam extends CameraFactory
 
             for (DrivingAlert alert : HighlightUtils.visibleAlertList) {
                 if (alert!=null) {
-                    Vector3f objWdCoord = alert.obj.getWorldTranslation().add(alert.pointerOffset);
-                    Vector3f objScreenCoord = sim.getCamera().getScreenCoordinates(objWdCoord.add(0, alert.headSpace, 0));
+					Vector3f ptWdCoord = alert.obj.getWorldTranslation().add(alert.pointerOffset);
+					Vector3f ptScreenCoord = sim.getCamera().getScreenCoordinates(ptWdCoord);
 
                     //Draw poplink, highlighting tag.
                     float tagCenterX;
-                    if (objScreenCoord.x>HighlightUtils.screenSizeX/2) {
-                        tagCenterX = objScreenCoord.x-50;
-                    }
+					if (ptScreenCoord.x > HighlightUtils.screenSizeX / 2) {
+						tagCenterX = ptScreenCoord.x - 50;
+					}
                     else{
-                        tagCenterX = objScreenCoord.x+50;
-                    }
-                    Vector3f tagScreenCoord = new Vector3f(tagCenterX,HighlightUtils.screenSizeY*2/3,objScreenCoord.z);
-                    alert.highlight.popLink.updatePoints(objScreenCoord, tagScreenCoord);
+						tagCenterX = ptScreenCoord.x + 50;
+					}
+					Vector3f tagScreenCoord = new Vector3f(tagCenterX, HighlightUtils.screenSizeY * 2 / 3, ptScreenCoord.z);
+					alert.highlight.popLink.updatePoints(ptScreenCoord, tagScreenCoord);
 
                     tagScreenCoord.x = tagCenterX - 50;
                     tagScreenCoord.y = tagScreenCoord.y - 50;								 // 2/3 from the bottom
